@@ -1,0 +1,212 @@
+"""
+Docker infrastructure for ARP Phase 2.
+Services: postgres, redis, minio, chroma, mlflow, api, worker
+"""
+services:
+  # ── PostgreSQL 16 ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: arp_postgres
+    environment:
+      POSTGRES_USER: arp
+      POSTGRES_PASSWORD: arp_password
+      POSTGRES_DB: arp_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arp -d arp_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 ───────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: arp_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MinIO (S3-compatible object storage) ──────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: arp_minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"    # API
+      - "9001:9001"    # Web UI (http://localhost:9001)
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Chroma Vector DB (self-hosted) ────────────────────────────────────────
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: arp_chroma
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      ANONYMIZED_TELEMETRY: "False"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── MLflow Tracking Server ────────────────────────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: arp_mlflow
+    ports:
+      - "5001:5000"
+    volumes:
+      - mlflow_data:/mlruns
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:///mlruns/mlflow.db
+      --default-artifact-root /mlruns/artifacts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── FastAPI Backend ───────────────────────────────────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: arp_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://arp:arp_password@postgres:5432/arp_db
+      SYNC_DATABASE_URL: postgresql+psycopg2://arp:arp_password@postgres:5432/arp_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_HOST: chroma
+      CHROMA_PORT: 8000
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+    command: >
+      sh -c "
+        python -m alembic upgrade head &&
+        uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --workers 2
+      "
+    volumes:
+      - ../mlruns:/app/mlruns
+
+  # ── Celery Worker (parse_queue) ───────────────────────────────────────────
+  worker_parse:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: arp_worker_parse
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://arp:arp_password@postgres:5432/arp_db
+      SYNC_DATABASE_URL: postgresql+psycopg2://arp:arp_password@postgres:5432/arp_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_HOST: chroma
+      CHROMA_PORT: 8000
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A backend.app.tasks.celery_app.celery_app worker
+      --loglevel=info
+      --queues=parse_queue
+      --concurrency=4
+      --hostname=worker-parse@%h
+
+  # ── Celery Worker (pipeline_queue) ────────────────────────────────────────
+  worker_pipeline:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: arp_worker_pipeline
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://arp:arp_password@postgres:5432/arp_db
+      SYNC_DATABASE_URL: postgresql+psycopg2://arp:arp_password@postgres:5432/arp_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      S3_ENDPOINT_URL: http://minio:9000
+      CHROMA_HOST: chroma
+      CHROMA_PORT: 8000
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      celery -A backend.app.tasks.celery_app.celery_app worker
+      --loglevel=info
+      --queues=pipeline_queue
+      --concurrency=2
+      --hostname=worker-pipeline@%h
+    volumes:
+      - ../mlruns:/app/mlruns
+
+  # ── Celery Flower (monitoring UI) ─────────────────────────────────────────
+  flower:
+    image: mher/flower:latest
+    container_name: arp_flower
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      FLOWER_PORT: 5555
+    depends_on:
+      - redis
+    command: celery --broker=redis://redis:6379/1 flower --port=5555
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  chroma_data:
+  mlflow_data:

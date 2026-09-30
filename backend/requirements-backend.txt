@@ -1,0 +1,67 @@
+# ── FastAPI core ────────────────────────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9        # file uploads
+
+# ── Config & environment ───────────────────────────────────────────────────────
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+python-dotenv>=1.0.0
+
+# ── Database ───────────────────────────────────────────────────────────────────
+sqlalchemy>=2.0.0
+asyncpg>=0.29.0                # async PostgreSQL driver
+alembic>=1.13.0
+psycopg2-binary>=2.9.9         # sync driver for Alembic migrations
+
+# ── Auth / Security ─────────────────────────────────────────────────────────── 
+python-jose[cryptography]>=3.3.0   # JWT (HS256)
+passlib[bcrypt]>=1.7.4             # password hashing
+cryptography>=42.0.0               # AES-256-GCM PII encryption
+
+# ── Rate limiting ──────────────────────────────────────────────────────────────
+slowapi>=0.1.9
+limits>=3.12.0
+
+# ── Redis / Celery async queue ─────────────────────────────────────────────────
+celery[redis]>=5.4.0
+redis>=5.0.0
+kombu>=5.3.0
+
+# ── Object storage (MinIO / S3) ────────────────────────────────────────────────
+boto3>=1.34.0
+
+# ── Vector DB (Chroma self-hosted) ────────────────────────────────────────────
+chromadb-client>=0.5.0
+
+# ── Resume parsing ─────────────────────────────────────────────────────────────
+PyMuPDF>=1.24.0                # fitz — PDF text extraction
+pdfplumber>=0.11.0             # table-aware PDF extraction fallback
+python-docx>=1.1.0             # DOCX parsing
+spacy>=3.7.0                   # NER for contact/skills extraction
+
+# ── ML / Embeddings (reuse from Phase 1) ──────────────────────────────────────
+sentence-transformers>=3.0.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
+
+# ── MLflow ─────────────────────────────────────────────────────────────────────
+mlflow>=2.14.0
+
+# ── HTTP client (for internal calls) ──────────────────────────────────────────
+httpx>=0.27.0
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+pytest>=8.2.0
+pytest-asyncio>=0.23.0
+pytest-cov>=5.0.0
+httpx>=0.27.0                  # AsyncClient for FastAPI test client
+fakeredis>=2.23.0              # in-process Redis mock
+moto[s3]>=5.0.0                # AWS S3 mock
+
+# ── Linting / formatting / type-checking ──────────────────────────────────────
+ruff>=0.4.0
+black>=24.4.0
+mypy>=1.10.0
+types-passlib>=1.7.7
+types-python-jose>=3.3.4

@@ -1,0 +1,8 @@
+# Install remaining packages (Gemini + embeddings)
+pip install google-generativeai sentence-transformers mlflow
+
+# Full pipeline with HITL recruiter review
+python main.py
+
+# Dry-run (no API key, no pause)
+python main.py --dry-run

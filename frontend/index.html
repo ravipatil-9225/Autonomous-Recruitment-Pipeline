@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autonomous Recruitment Pipeline (ARP) — Intelligence Platform</title>
+  <meta name="description" content="Production-grade AI Multi-Agent Recruitment Pipeline with LangGraph orchestration, vector similarity ranking, and human-in-the-loop review." />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <div class="brand-title">
+          <div class="brand-name">
+            ARP PLATFORM
+            <span class="brand-tag">v2.0</span>
+          </div>
+          <span class="brand-subtitle">Autonomous Recruitment</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Orchestration</div>
+        <a class="nav-item active" data-tab="pipeline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <span>Pipeline Graph</span>
+          <span class="nav-badge">LIVE</span>
+        </a>
+        <a class="nav-item" data-tab="candidates">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Candidate Matrix</span>
+        </a>
+        <a class="nav-item" data-tab="hitl">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>HITL Review Queue</span>
+          <span class="nav-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border-color: rgba(245, 158, 11, 0.3);">4</span>
+        </a>
+
+        <div class="nav-section-title">Management</div>
+        <a class="nav-item" data-tab="jobs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+          <span>Job Requisitions</span>
+        </a>
+        <a class="nav-item" data-tab="resumes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span>Resume Ingestion</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status-card">
+          <div class="status-indicator">
+            <div class="pulse-dot"></div>
+            <span>Postgres & Redis Online</span>
+          </div>
+          <span class="mono" style="font-size: 11px; color: var(--text-muted);">CELERY OK</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <div class="main-wrapper">
+      <!-- Top Navbar -->
+      <header class="top-navbar">
+        <div class="navbar-left">
+          <h1 class="page-title" id="page-title">Autonomous Recruitment Orchestrator</h1>
+          <select id="navbar-job-select" class="job-selector-dropdown">
+            <option value="">Loading Requisitions…</option>
+          </select>
+        </div>
+
+        <div class="navbar-right">
+          <div class="role-badge-toggle">
+            <span>Role:</span>
+            <select id="role-select" class="role-select">
+              <option value="recruiter">Recruiter (HITL Review)</option>
+              <option value="admin">Admin (Full Access & GDPR)</option>
+              <option value="hiring_manager">Hiring Manager</option>
+              <option value="viewer">Viewer (Read-Only)</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="window.arpApp.openJobModal()">
+            + New Requisition
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Page Content -->
+      <main class="page-content">
+        <!-- KPI Metrics Grid -->
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Ranked Candidates</span>
+              <div class="kpi-icon-wrap kpi-icon-indigo">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-total-candidates">4</div>
+            <div class="kpi-subtext">Across active requisitions</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Average Match Index</span>
+              <div class="kpi-icon-wrap kpi-icon-cyan">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-avg-score">82.3%</div>
+            <div class="kpi-subtext">Vector cosine + rubric weight</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Shortlisted Candidates</span>
+              <div class="kpi-icon-wrap kpi-icon-emerald">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-shortlisted">3</div>
+            <div class="kpi-subtext">Ready for recruiter approval</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Diversity Parity (4/5ths)</span>
+              <div class="kpi-icon-wrap kpi-icon-amber">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-parity-score">0.94</div>
+            <div class="kpi-subtext">Zero bias penalties triggered</div>
+          </div>
+        </section>
+
+        <!-- View 1: Pipeline Orchestrator -->
+        <section id="view-pipeline" class="view-panel active">
+          <div class="pipeline-visualizer-container" id="pipeline-visualizer-mount"></div>
+          <div class="glass-panel" id="candidates-table-mount"></div>
+        </section>
+
+        <!-- View 2: Candidate Matrix -->
+        <section id="view-candidates" class="view-panel">
+          <div class="glass-panel">
+            <div id="candidates-full-mount"></div>
+          </div>
+        </section>
+
+        <!-- View 3: Recruiter HITL Decision Queue -->
+        <section id="view-hitl" class="view-panel">
+          <div class="glass-panel" id="hitl-mount"></div>
+        </section>
+
+        <!-- View 4: Job Requisitions -->
+        <section id="view-jobs" class="view-panel">
+          <div class="glass-panel" id="jobs-mount"></div>
+        </section>
+
+        <!-- View 5: Resume Ingestion -->
+        <section id="view-resumes" class="view-panel">
+          <div class="glass-panel" id="resumes-mount"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Slide-over Candidate Inspection Drawer -->
+  <div class="drawer-backdrop" id="drawer-backdrop">
+    <div class="slide-drawer" id="slide-drawer">
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+        <button id="close-drawer-btn" class="btn btn-secondary btn-sm" style="border-radius: 50%; width: 32px; height: 32px; padding: 0;">✕</button>
+      </div>
+      <div id="drawer-candidate-content"></div>
+    </div>
+  </div>
+
+  <!-- Create Job Requisition Modal -->
+  <div class="modal-backdrop" id="job-modal-backdrop">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 18px; font-weight: 700;">Create New Job Requisition</h3>
+        <button id="close-job-modal-btn" class="btn btn-secondary btn-sm" style="border-radius: 50%; width: 28px; height: 28px; padding: 0;">✕</button>
+      </div>
+      <form id="create-job-form">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="font-size: 12.5px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Job Title *</label>
+            <input type="text" id="job-title-input" required placeholder="e.g. Senior AI / Agent Systems Engineer" 
+              style="width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); font-size: 13.5px; outline: none;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="font-size: 12.5px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Department</label>
+              <input type="text" id="job-dept-input" placeholder="e.g. AI & Research" 
+                style="width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); font-size: 13.5px; outline: none;" />
+            </div>
+            <div>
+              <label style="font-size: 12.5px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Location</label>
+              <input type="text" id="job-loc-input" placeholder="e.g. San Francisco, CA / Remote" 
+                style="width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 8px 12px; color: var(--text-primary); font-size: 13.5px; outline: none;" />
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size: 12.5px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">Full Job Description (min 50 chars) *</label>
+            <textarea id="job-jd-input" rows="5" required placeholder="Paste full job description, role requirements, and technical competencies here..."
+              style="width: 100%; background: var(--bg-surface-elevated); border: 1px solid var(--border-medium); border-radius: var(--radius-md); padding: 10px 12px; color: var(--text-primary); font-size: 13px; font-family: var(--font-sans); outline: none; resize: vertical;"></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <button type="button" class="btn btn-secondary" onclick="window.arpApp.closeJobModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Requisition</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Main ES6 Modules -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
