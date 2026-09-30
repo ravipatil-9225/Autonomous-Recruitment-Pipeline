@@ -4,7 +4,9 @@ Agent 4 – Interview Scheduler
 Books interview slots for above-threshold candidates via the
 Calendar API tool and triggers notification emails.
 """
+
 import logging
+
 from graph.state import RecruitmentState
 from tools.calendar_tool import book_interview_slot
 

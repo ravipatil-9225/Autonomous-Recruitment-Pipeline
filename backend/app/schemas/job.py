@@ -3,6 +3,7 @@ Job Schemas  (Pydantic v2)
 ───────────────────────────
 Request / response models for the Job & Requisition endpoints (§11.1).
 """
+
 import uuid
 from datetime import datetime
 from typing import Any
@@ -12,6 +13,7 @@ from pydantic import BaseModel, Field
 
 class JobCreateRequest(BaseModel):
     """POST /api/v1/jobs — create a new job requisition."""
+
     title: str = Field(min_length=3, max_length=255)
     raw_jd_text: str = Field(min_length=50, description="Full job description text")
     department: str | None = None
@@ -20,6 +22,7 @@ class JobCreateRequest(BaseModel):
 
 class JobUpdateRequest(BaseModel):
     """PUT /api/v1/jobs/{id} — update a draft job."""
+
     title: str | None = Field(default=None, min_length=3, max_length=255)
     raw_jd_text: str | None = Field(default=None, min_length=50)
     department: str | None = None
@@ -28,6 +31,7 @@ class JobUpdateRequest(BaseModel):
 
 class JobResponse(BaseModel):
     """Full job object returned to callers."""
+
     id: uuid.UUID
     title: str
     department: str | None
@@ -46,6 +50,7 @@ class JobResponse(BaseModel):
 
 class JobSummaryResponse(BaseModel):
     """Lightweight listing item."""
+
     id: uuid.UUID
     title: str
     department: str | None

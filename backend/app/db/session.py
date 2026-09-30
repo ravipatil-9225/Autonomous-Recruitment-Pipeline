@@ -5,6 +5,7 @@ Usage in FastAPI dependency:
     async with async_session() as session:
         ...
 """
+
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (

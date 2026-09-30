@@ -3,12 +3,12 @@ Pipeline API Tests
 ──────────────────
 Tests for §11.3 Pipeline Triggering & HITL Recruiter Decision submission.
 """
+
 import uuid
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
 from httpx import AsyncClient
-
-from backend.app.models.application import PipelineRun, PipelineStatus
 
 
 @pytest.mark.asyncio

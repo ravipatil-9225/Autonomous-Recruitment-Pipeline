@@ -2,19 +2,19 @@
 Tests: Individual Agent Nodes (offline/mock)
 Uses monkeypatching to avoid real Gemini API calls.
 """
-import pytest
-from unittest.mock import patch, MagicMock
-from graph.state import initial_state
 
+from graph.state import initial_state
 
 # ── Matching & Scoring (no LLM needed) ────────────────────────────────────────
 
+
 def test_matching_scoring_splits_candidates():
     """Above/below threshold split should work correctly."""
-    from agents.matching_scoring import matching_scoring_node
-
     # Build a state with pre-set embeddings so we avoid real embedding model
     import numpy as np
+
+    from agents.matching_scoring import matching_scoring_node
+
     jd_emb = np.ones(384).tolist()
     high_emb = np.ones(384).tolist()
     low_emb = (-1 * np.ones(384)).tolist()
@@ -23,7 +23,7 @@ def test_matching_scoring_splits_candidates():
     state["jd_embedding"] = jd_emb
     state["parsed_candidates"] = [
         {"id": "C1", "name": "Alice", "email": "a@e.com", "experience_years": 5, "embedding": high_emb},
-        {"id": "C2", "name": "Bob",   "email": "b@e.com", "experience_years": 1, "embedding": low_emb},
+        {"id": "C2", "name": "Bob", "email": "b@e.com", "experience_years": 1, "embedding": low_emb},
     ]
 
     result = matching_scoring_node(state)
@@ -38,9 +38,12 @@ def test_matching_scoring_splits_candidates():
 def test_matching_scoring_missing_jd_embedding():
     """Missing JD embedding should gracefully return empty results and log error."""
     from agents.matching_scoring import matching_scoring_node
+
     state = initial_state("JD", [])
     state["jd_embedding"] = []  # Missing
-    state["parsed_candidates"] = [{"id": "C1", "name": "Alice", "email": "a@e.com", "experience_years": 5, "embedding": []}]
+    state["parsed_candidates"] = [
+        {"id": "C1", "name": "Alice", "email": "a@e.com", "experience_years": 5, "embedding": []}
+    ]
 
     result = matching_scoring_node(state)
     assert result["above_threshold"] == []
@@ -50,6 +53,7 @@ def test_matching_scoring_missing_jd_embedding():
 
 # ── Evaluation & Ranking ───────────────────────────────────────────────────────
 
+
 def test_evaluation_ranking_order():
     """Final ranking must be sorted descending by final_score."""
     from agents.evaluation_ranking import evaluation_ranking_node
@@ -57,7 +61,7 @@ def test_evaluation_ranking_order():
     state = initial_state("JD", [])
     state["above_threshold"] = [
         {"id": "C1", "name": "Alice", "email": "a@e.com", "adjusted_score": 0.9, "skills": [], "experience_years": 5},
-        {"id": "C2", "name": "Bob",   "email": "b@e.com", "adjusted_score": 0.7, "skills": [], "experience_years": 3},
+        {"id": "C2", "name": "Bob", "email": "b@e.com", "adjusted_score": 0.7, "skills": [], "experience_years": 3},
         {"id": "C3", "name": "Carol", "email": "c@e.com", "adjusted_score": 0.8, "skills": [], "experience_years": 4},
     ]
     state["interview_scores"] = [
@@ -77,6 +81,7 @@ def test_evaluation_ranking_order():
 def test_evaluation_ranking_assigns_rank():
     """Each candidate should receive a rank starting at 1."""
     from agents.evaluation_ranking import evaluation_ranking_node
+
     state = initial_state("JD", [])
     state["above_threshold"] = [
         {"id": "C1", "name": "X", "email": "", "adjusted_score": 0.8, "skills": [], "experience_years": 4},
@@ -90,9 +95,11 @@ def test_evaluation_ranking_assigns_rank():
 
 # ── Bias Audit ─────────────────────────────────────────────────────────────────
 
+
 def test_bias_audit_no_candidates():
     """Bias audit should gracefully handle empty ranking."""
     from agents.bias_audit import bias_audit_node
+
     state = initial_state("JD", [])
     state["final_ranking"] = []
     result = bias_audit_node(state)
@@ -102,6 +109,7 @@ def test_bias_audit_no_candidates():
 def test_bias_audit_flags_large_gap():
     """Should flag a large score gap."""
     from agents.bias_audit import bias_audit_node
+
     state = initial_state("JD", [])
     state["final_ranking"] = [
         {"rank": 1, "name": "A", "final_score": 0.95, "match_score": 0.9, "interview_score": 1.0},
@@ -114,9 +122,11 @@ def test_bias_audit_flags_large_gap():
 
 # ── Calendar Tool ──────────────────────────────────────────────────────────────
 
+
 def test_calendar_tool_returns_booking():
     """Calendar tool should return a booking dict with required keys."""
     from tools.calendar_tool import book_interview_slot
+
     # Pass failure_rate=0.0 so the random check never triggers
     booking = book_interview_slot("C1", "Alice", "alice@example.com", failure_rate=0.0)
     assert "booking_id" in booking

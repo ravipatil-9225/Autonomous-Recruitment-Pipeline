@@ -4,9 +4,10 @@ Pipeline Celery Tasks  (§10.2 + LangGraph integration)
 run_pipeline_task — invokes the Phase-1 LangGraph pipeline for a job,
                     persists result to DB, logs to MLflow.
 """
+
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from backend.app.tasks.celery_app import celery_app
 
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
     max_retries=2,
     default_retry_delay=60,
     queue="pipeline_queue",
-    time_limit=1800,   # 30 min hard limit (§12 Scalability NFR)
+    time_limit=1800,  # 30 min hard limit (§12 Scalability NFR)
     soft_time_limit=1500,
 )
 def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> dict:
@@ -38,10 +39,10 @@ def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> 
     from sqlalchemy.orm import Session
 
     from backend.app.config import settings
+    from backend.app.core.security import decrypt_pii
     from backend.app.models.application import Application, PipelineRun, PipelineStatus
     from backend.app.models.candidate import Candidate, Resume
     from backend.app.models.job import Job
-    from backend.app.core.security import decrypt_pii
     from graph.orchestrator import build_graph
     from graph.state import initial_state
     from tools.mlflow_tracker import log_recruiter_decision
@@ -52,20 +53,16 @@ def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> 
     try:
         with Session(engine) as db:
             # 1. Load PipelineRun and mark running
-            run = db.execute(
-                select(PipelineRun).where(PipelineRun.id == uuid.UUID(run_id))
-            ).scalar_one_or_none()
+            run = db.execute(select(PipelineRun).where(PipelineRun.id == uuid.UUID(run_id))).scalar_one_or_none()
             if not run:
                 return {"status": "failed", "error": "PipelineRun not found"}
 
             run.status = PipelineStatus.running
-            run.started_at = datetime.now(timezone.utc)
+            run.started_at = datetime.now(UTC)
             db.commit()
 
             # 2. Load job and resumes from DB
-            job = db.execute(
-                select(Job).where(Job.id == uuid.UUID(job_id))
-            ).scalar_one_or_none()
+            job = db.execute(select(Job).where(Job.id == uuid.UUID(job_id))).scalar_one_or_none()
             if not job:
                 run.status = PipelineStatus.failed
                 run.error_message = "Job not found"
@@ -75,9 +72,7 @@ def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> 
             # 3. Build candidate list for Phase-1 pipeline
             candidates_input = []
             for rid in resume_ids:
-                resume = db.execute(
-                    select(Resume).where(Resume.id == uuid.UUID(rid))
-                ).scalar_one_or_none()
+                resume = db.execute(select(Resume).where(Resume.id == uuid.UUID(rid))).scalar_one_or_none()
                 if not resume or not resume.parsed_data:
                     continue
                 candidate = db.execute(
@@ -89,12 +84,14 @@ def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> 
                 # Inject decrypted PII into the Phase-1 format
                 parsed["name"] = decrypt_pii(candidate.name_encrypted)
                 parsed["email"] = decrypt_pii(candidate.email_encrypted)
-                candidates_input.append({
-                    "id": str(resume.candidate_id),
-                    "resume_id": rid,
-                    "resume_text": parsed.get("raw_text", ""),
-                    **parsed,
-                })
+                candidates_input.append(
+                    {
+                        "id": str(resume.candidate_id),
+                        "resume_id": rid,
+                        "resume_text": parsed.get("raw_text", ""),
+                        **parsed,
+                    }
+                )
 
             if not candidates_input:
                 run.status = PipelineStatus.failed
@@ -122,7 +119,7 @@ def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> 
 
             # 5. Persist final state to PipelineRun
             run.status = PipelineStatus.completed
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
             run.result = {
                 "final_ranking": final_state.get("final_ranking", []),
                 "fairness_report": final_state.get("fairness_report", {}),
@@ -164,8 +161,7 @@ def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> 
                 logger.warning(f"MLflow logging failed (non-fatal): {mlflow_exc}")
 
             logger.info(
-                f"[run_pipeline_task] Completed run_id={run_id}, "
-                f"ranked={len(final_state.get('final_ranking', []))}"
+                f"[run_pipeline_task] Completed run_id={run_id}, " f"ranked={len(final_state.get('final_ranking', []))}"
             )
             return {
                 "status": "completed",
@@ -178,14 +174,13 @@ def run_pipeline_task(self, run_id: str, job_id: str, resume_ids: list[str]) -> 
         logger.error(f"[run_pipeline_task] Failed run_id={run_id}: {exc}")
         try:
             with Session(engine) as db:
-                run = db.execute(
-                    select(PipelineRun).where(PipelineRun.id == uuid.UUID(run_id))
-                ).scalar_one_or_none()
+                run = db.execute(select(PipelineRun).where(PipelineRun.id == uuid.UUID(run_id))).scalar_one_or_none()
                 if run:
                     from backend.app.models.application import PipelineStatus
+
                     run.status = PipelineStatus.failed
                     run.error_message = str(exc)
-                    run.completed_at = datetime.now(timezone.utc)
+                    run.completed_at = datetime.now(UTC)
                     db.commit()
         except Exception:
             pass

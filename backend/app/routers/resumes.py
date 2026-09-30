@@ -7,14 +7,13 @@ Endpoints:
   GET    /api/v1/resumes/{id}         — get parsed resume
   DELETE /api/v1/resumes/candidate/{id} — GDPR right-to-deletion
 """
+
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from backend.app.core.rbac import require_min_role, require_roles
-from backend.app.core.rate_limiter import limiter
-from backend.app.config import settings
-from backend.app.dependencies import CurrentUser, DBSession
+from backend.app.dependencies import DBSession
 from backend.app.models.user import User, UserRole
 from backend.app.schemas.candidate import (
     BulkUploadResponse,
@@ -66,6 +65,7 @@ async def bulk_upload(
     """
     if len(files) > 50:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="Maximum 50 files per bulk upload.")
     svc = ResumeService(db)
     return await svc.bulk_upload_resumes(files, job_id=job_id)

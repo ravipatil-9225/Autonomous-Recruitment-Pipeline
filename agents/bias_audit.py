@@ -8,8 +8,10 @@ In production, this would analyze demographic attributes if ethically
 collected and consented. Here we perform a statistical distribution
 analysis as a fairness proxy.
 """
+
 import logging
 import statistics
+
 from graph.state import RecruitmentState
 
 logger = logging.getLogger(__name__)
@@ -78,12 +80,10 @@ def bias_audit_node(state: RecruitmentState) -> dict:
         "gini_coefficient": gini,
         "bias_flags": flags if flags else ["✅ No significant bias signals detected."],
         "top_candidates": [
-            {"rank": c["rank"], "name": c["name"], "final_score": c["final_score"]}
-            for c in ranking[:3]
+            {"rank": c["rank"], "name": c["name"], "final_score": c["final_score"]} for c in ranking[:3]
         ],
         "recommendation": (
-            "Proceed with confidence." if not flags
-            else "Manual review recommended before final decision."
+            "Proceed with confidence." if not flags else "Manual review recommended before final decision."
         ),
     }
 

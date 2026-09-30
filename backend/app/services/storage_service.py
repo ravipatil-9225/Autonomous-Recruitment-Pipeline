@@ -5,6 +5,7 @@ Abstraction over boto3 for resume file storage.
 Configured via settings; transparently works with both MinIO (local dev)
 and real AWS S3 (production).
 """
+
 import logging
 from io import BytesIO
 

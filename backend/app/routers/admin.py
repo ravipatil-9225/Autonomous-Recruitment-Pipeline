@@ -7,6 +7,7 @@ Endpoints:
   PUT  /admin/users/{id}/deactivate — deactivate user
   GET  /admin/health      — deep health check (DB, Redis, S3, Chroma)
 """
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,7 +15,7 @@ from sqlalchemy import select, text
 
 from backend.app.auth.service import AuthService
 from backend.app.core.rbac import require_roles
-from backend.app.dependencies import CurrentUser, DBSession, Redis, get_redis
+from backend.app.dependencies import DBSession, Redis
 from backend.app.models.user import User, UserRole
 from backend.app.schemas.auth import UserCreateRequest, UserResponse
 
@@ -101,6 +102,7 @@ async def health_check(
     # S3/MinIO
     try:
         from backend.app.services import storage_service
+
         storage_service.ensure_bucket_exists()
         checks["s3_minio"] = "ok"
     except Exception as exc:
@@ -108,8 +110,10 @@ async def health_check(
 
     # Chroma
     try:
-        from backend.app.config import settings
         import chromadb
+
+        from backend.app.config import settings
+
         chroma = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
         chroma.heartbeat()
         checks["chroma"] = "ok"

@@ -3,6 +3,7 @@ Alembic migration environment.
 Loads the sync DB URL from environment / .env and wires
 all ORM models so autogenerate can detect schema changes.
 """
+
 import os
 import sys
 from logging.config import fileConfig
@@ -16,12 +17,13 @@ repo_root = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(repo_root))
 
 from dotenv import load_dotenv
+
 load_dotenv(repo_root / "backend" / ".env")
 load_dotenv(repo_root / ".env")
 
 # ── Import all models so Alembic sees them for autogenerate ──────────────────
-from backend.app.db.base import Base  # noqa: F401
-from backend.app.models import user, job, candidate, consent, application  # noqa: F401
+from backend.app.db.base import Base
+from backend.app.models import application, candidate, consent, job, user  # noqa: F401
 
 # ── Alembic config object ─────────────────────────────────────────────────────
 config = context.config
@@ -41,6 +43,7 @@ target_metadata = Base.metadata
 
 # ── Offline mode ──────────────────────────────────────────────────────────────
 
+
 def run_migrations_offline() -> None:
     """Generate SQL script without connecting to DB."""
     url = config.get_main_option("sqlalchemy.url")
@@ -56,6 +59,7 @@ def run_migrations_offline() -> None:
 
 
 # ── Online mode ───────────────────────────────────────────────────────────────
+
 
 def run_migrations_online() -> None:
     """Apply migrations against a live DB connection."""

@@ -5,21 +5,21 @@ Security Core: JWT + AES-256-GCM PII Encryption
 • AES-256-GCM encrypt/decrypt for PII columns (name, email, phone)
 • Password hashing via bcrypt (passlib)
 """
+
 import base64
 import hashlib
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import bcrypt
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+from jose import jwt
 
 from backend.app.config import settings
 
-import bcrypt
-
 # ── Password hashing ──────────────────────────────────────────────────────────
+
 
 def hash_password(plain: str) -> str:
     """Return bcrypt hash of a plaintext password."""
@@ -35,9 +35,10 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
 
+
 def create_access_token(subject: str, extra_claims: dict[str, Any] | None = None) -> str:
     """Create a short-lived JWT access token."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + timedelta(minutes=settings.access_token_expire_minutes)
     payload: dict[str, Any] = {
         "sub": subject,
@@ -52,7 +53,7 @@ def create_access_token(subject: str, extra_claims: dict[str, Any] | None = None
 
 def create_refresh_token(subject: str) -> str:
     """Create a long-lived JWT refresh token."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expire = now + timedelta(days=settings.refresh_token_expire_days)
     payload: dict[str, Any] = {
         "sub": subject,
@@ -72,6 +73,7 @@ def decode_token(token: str) -> dict[str, Any]:
 
 
 # ── PII Encryption (AES-256-GCM) ──────────────────────────────────────────────
+
 
 def _get_aes_key() -> bytes:
     """Decode the base64-encoded AES-256 key from settings."""

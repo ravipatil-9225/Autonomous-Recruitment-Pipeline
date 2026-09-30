@@ -9,12 +9,13 @@ Endpoints:
   POST   /api/v1/jobs/{id}/publish — draft → open
   POST   /api/v1/jobs/{id}/close   — open → closed
 """
+
 import uuid
 
 from fastapi import APIRouter, Depends, Query
 
 from backend.app.core.rbac import require_min_role, require_roles
-from backend.app.dependencies import CurrentUser, DBSession
+from backend.app.dependencies import DBSession
 from backend.app.models.user import User, UserRole
 from backend.app.schemas.job import (
     JobCreateRequest,

@@ -14,6 +14,7 @@ Usage in a router:
         ...
     ):
 """
+
 from fastapi import Depends, HTTPException, status
 
 from backend.app.models.user import User, UserRole
@@ -62,10 +63,7 @@ def require_min_role(min_role: UserRole):
         if _ROLE_RANK.get(current_user.role, -1) < min_rank:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    f"Minimum role '{min_role.value}' required. "
-                    f"Your role: {current_user.role.value}"
-                ),
+                detail=(f"Minimum role '{min_role.value}' required. " f"Your role: {current_user.role.value}"),
             )
         return current_user
 
@@ -74,6 +72,7 @@ def require_min_role(min_role: UserRole):
 
 # ── Placeholder — replaced by real dependency in dependencies.py ──────────────
 # This avoids a circular import; dependencies.py overrides this at app startup.
+
 
 async def _get_current_user_placeholder() -> User:  # pragma: no cover
     raise NotImplementedError("Inject get_current_active_user from dependencies.py")

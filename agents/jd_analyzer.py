@@ -4,14 +4,14 @@ Agent 1 – JD Analyzer
 Extracts structured requirements from raw job description text
 and generates a vector embedding of the JD using Gemini.
 """
+
 import json
-import os
 import logging
-from tenacity import retry, stop_after_attempt, wait_exponential
+import os
 
 from google import genai
-from google.genai import types
 from sentence_transformers import SentenceTransformer
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from graph.state import RecruitmentState
 
@@ -22,7 +22,7 @@ _client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 _MODEL = "gemini-2.5-flash"
 _embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
-_SYSTEM_PROMPT = """You are an expert HR analyst. Given the job description below, 
+_SYSTEM_PROMPT = """You are an expert HR analyst. Given the job description below,
 extract the following as valid JSON with no markdown fences:
 {
   "role_title": "...",

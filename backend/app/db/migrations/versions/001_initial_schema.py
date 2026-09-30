@@ -4,8 +4,9 @@ Revision ID: 001
 Revises: (none)
 Create Date: 2026-09-09
 """
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "001_initial_schema"
@@ -19,7 +20,9 @@ def upgrade() -> None:
     op.execute("CREATE TYPE user_role AS ENUM ('admin', 'recruiter', 'hiring_manager', 'viewer')")
     op.execute("CREATE TYPE job_status AS ENUM ('draft', 'open', 'closed', 'archived')")
     op.execute("CREATE TYPE pipeline_status AS ENUM ('queued', 'running', 'completed', 'failed', 'cancelled')")
-    op.execute("CREATE TYPE application_stage AS ENUM ('applied', 'screening', 'shortlisted', 'interviewing', 'offered', 'hired', 'rejected', 'withdrawn')")
+    op.execute(
+        "CREATE TYPE application_stage AS ENUM ('applied', 'screening', 'shortlisted', 'interviewing', 'offered', 'hired', 'rejected', 'withdrawn')"
+    )
 
     # ── consent_records ───────────────────────────────────────────────────
     op.create_table(
@@ -56,7 +59,12 @@ def upgrade() -> None:
         sa.Column("email_encrypted", sa.Text, nullable=False),
         sa.Column("phone_encrypted", sa.Text, nullable=True),
         sa.Column("email_hash", sa.String(64), nullable=False, unique=True),
-        sa.Column("consent_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("consent_records.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column(
+            "consent_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("consent_records.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
         sa.Column("is_deleted", sa.Boolean, nullable=False, server_default="false"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
@@ -73,8 +81,15 @@ def upgrade() -> None:
         sa.Column("raw_jd_text", sa.Text, nullable=False),
         sa.Column("structured_requirements", postgresql.JSONB, nullable=True),
         sa.Column("jd_embedding_id", sa.String(255), nullable=True),
-        sa.Column("status", sa.Enum("draft", "open", "closed", "archived", name="job_status"), nullable=False, server_default="draft"),
-        sa.Column("created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "status",
+            sa.Enum("draft", "open", "closed", "archived", name="job_status"),
+            nullable=False,
+            server_default="draft",
+        ),
+        sa.Column(
+            "created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
@@ -85,7 +100,12 @@ def upgrade() -> None:
     op.create_table(
         "resumes",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("candidate_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("candidates.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "candidate_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("candidates.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("s3_key", sa.String(1024), nullable=False),
         sa.Column("original_filename", sa.String(512), nullable=False),
         sa.Column("file_size_bytes", sa.Integer, nullable=False),
@@ -103,12 +123,21 @@ def upgrade() -> None:
     op.create_table(
         "pipeline_runs",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("job_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "job_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("celery_task_id", sa.String(255), nullable=True),
-        sa.Column("status", sa.Enum("queued", "running", "completed", "failed", "cancelled", name="pipeline_status"), nullable=False, server_default="queued"),
+        sa.Column(
+            "status",
+            sa.Enum("queued", "running", "completed", "failed", "cancelled", name="pipeline_status"),
+            nullable=False,
+            server_default="queued",
+        ),
         sa.Column("result", postgresql.JSONB, nullable=True),
         sa.Column("error_message", sa.Text, nullable=True),
-        sa.Column("triggered_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "triggered_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
@@ -120,11 +149,40 @@ def upgrade() -> None:
     op.create_table(
         "applications",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("candidate_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("candidates.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("job_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("pipeline_run_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("pipeline_runs.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("resume_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("resumes.id", ondelete="SET NULL"), nullable=True),
-        sa.Column("stage", sa.Enum("applied", "screening", "shortlisted", "interviewing", "offered", "hired", "rejected", "withdrawn", name="application_stage"), nullable=False, server_default="applied"),
+        sa.Column(
+            "candidate_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("candidates.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "job_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "pipeline_run_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("pipeline_runs.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
+            "resume_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("resumes.id", ondelete="SET NULL"), nullable=True
+        ),
+        sa.Column(
+            "stage",
+            sa.Enum(
+                "applied",
+                "screening",
+                "shortlisted",
+                "interviewing",
+                "offered",
+                "hired",
+                "rejected",
+                "withdrawn",
+                name="application_stage",
+            ),
+            nullable=False,
+            server_default="applied",
+        ),
         sa.Column("similarity_score", sa.Float, nullable=True),
         sa.Column("adjusted_score", sa.Float, nullable=True),
         sa.Column("interview_score", sa.Float, nullable=True),

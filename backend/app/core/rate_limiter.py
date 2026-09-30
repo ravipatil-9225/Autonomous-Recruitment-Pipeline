@@ -4,6 +4,7 @@ Rate Limiter Setup (slowapi)
 Provides a shared Limiter instance and the rate-limit exceeded handler.
 Mount on the FastAPI app in main.py.
 """
+
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -22,4 +23,4 @@ limiter = Limiter(
 
 rate_limit_handler = _rate_limit_exceeded_handler
 
-__all__ = ["limiter", "RateLimitExceeded", "rate_limit_handler"]
+__all__ = ["RateLimitExceeded", "limiter", "rate_limit_handler"]

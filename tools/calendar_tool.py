@@ -4,10 +4,10 @@ Calendar API Tool (Mock)
 In production, replace with Google Calendar / Calendly / Outlook API calls.
 Currently returns realistic mock slot booking confirmations.
 """
-import uuid
+
 import logging
-from datetime import datetime, timedelta
 import random
+import uuid
 
 logger = logging.getLogger(__name__)
 

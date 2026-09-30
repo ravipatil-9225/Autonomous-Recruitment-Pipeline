@@ -4,10 +4,11 @@ ORM Models: Candidate & Resume  (§11.2 + §12 PII)
 PII fields (name, email, phone) are stored AES-256-GCM encrypted.
 Decryption only happens in the service layer — never in raw DB queries.
 """
+
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,9 +23,7 @@ class Candidate(Base):
 
     __tablename__ = "candidates"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # ── Encrypted PII (AES-256-GCM, base64 ciphertext) ─────────────────────
     name_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
@@ -44,9 +43,7 @@ class Candidate(Base):
     # Soft-delete flag (for right-to-deletion execution)
     is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -58,9 +55,7 @@ class Candidate(Base):
     consent: Mapped["ConsentRecord"] = relationship(  # noqa: F821
         "ConsentRecord", back_populates="candidate", lazy="select"
     )
-    resumes: Mapped[list["Resume"]] = relationship(
-        "Resume", back_populates="candidate", lazy="select"
-    )
+    resumes: Mapped[list["Resume"]] = relationship("Resume", back_populates="candidate", lazy="select")
     applications: Mapped[list["Application"]] = relationship(  # noqa: F821
         "Application", back_populates="candidate", lazy="select"
     )
@@ -77,9 +72,7 @@ class Resume(Base):
 
     __tablename__ = "resumes"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("candidates.id", ondelete="CASCADE"),
@@ -94,9 +87,7 @@ class Resume(Base):
     content_type: Mapped[str] = mapped_column(String(128), nullable=False)
 
     # Parsing pipeline output (JSON blob — structured profile)
-    parsed_data: Mapped[dict | None] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"), nullable=True
-    )
+    parsed_data: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # Chroma vector DB document ID for the resume embedding
     embedding_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -107,17 +98,11 @@ class Resume(Base):
         String(32), nullable=False, default="pending"
     )  # pending | processing | done | failed
 
-    uploaded_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    parsed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    parsed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationship
-    candidate: Mapped["Candidate"] = relationship(
-        "Candidate", back_populates="resumes", lazy="select"
-    )
+    candidate: Mapped["Candidate"] = relationship("Candidate", back_populates="resumes", lazy="select")
 
     def __repr__(self) -> str:
         return f"<Resume id={self.id} file={self.original_filename!r} status={self.parse_status}>"

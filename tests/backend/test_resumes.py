@@ -2,11 +2,11 @@
 Resume Ingestion & GDPR Tests (§11.2)
 ────────────────────────────────────────
 """
-import uuid
-from unittest.mock import patch, MagicMock
+
+from unittest.mock import MagicMock, patch
+
 import pytest
 from httpx import AsyncClient
-import backend.app.tasks.resume_tasks  # ensure module is loaded for mock patching
 
 
 @pytest.mark.asyncio
@@ -20,8 +20,10 @@ async def test_upload_single_resume(async_client: AsyncClient, recruiter_headers
     mock_task = MagicMock()
     mock_task.id = "task-123"
 
-    with patch("backend.app.services.storage_service.upload_resume", return_value="resumes/test-uuid.pdf"), \
-         patch("backend.app.tasks.resume_tasks.parse_resume_task.delay", return_value=mock_task):
+    with (
+        patch("backend.app.services.storage_service.upload_resume", return_value="resumes/test-uuid.pdf"),
+        patch("backend.app.tasks.resume_tasks.parse_resume_task.delay", return_value=mock_task),
+    ):
 
         response = await async_client.post(
             "/api/v1/resumes/upload",
@@ -59,15 +61,17 @@ async def test_gdpr_deletion_admin(async_client: AsyncClient, admin_headers, rec
     mock_task = MagicMock()
     mock_task.id = "task-456"
 
-    with patch("backend.app.services.storage_service.upload_resume", return_value="resumes/cand.pdf"), \
-         patch("backend.app.tasks.resume_tasks.parse_resume_task.delay", return_value=mock_task):
+    with (
+        patch("backend.app.services.storage_service.upload_resume", return_value="resumes/cand.pdf"),
+        patch("backend.app.tasks.resume_tasks.parse_resume_task.delay", return_value=mock_task),
+    ):
 
         upload_resp = await async_client.post(
             "/api/v1/resumes/upload",
             files=files,
             headers={"Authorization": recruiter_headers["Authorization"]},
         )
-    
+
     cand_id = upload_resp.json()["candidate_id"]
 
     # Delete as admin
@@ -79,4 +83,3 @@ async def test_gdpr_deletion_admin(async_client: AsyncClient, admin_headers, rec
 
     assert del_resp.status_code == 200
     assert del_resp.json()["pii_wiped"] is True
-

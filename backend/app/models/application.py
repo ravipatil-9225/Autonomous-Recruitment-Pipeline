@@ -4,11 +4,12 @@ ORM Models: PipelineRun & Application
 PipelineRun: one LangGraph execution per (job, batch of resumes).
 Application: links a candidate to a job + their pipeline outcome.
 """
+
 import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, JSON, String, Text, func
+from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,9 +43,7 @@ class PipelineRun(Base):
 
     __tablename__ = "pipeline_runs"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("jobs.id", ondelete="CASCADE"),
@@ -62,9 +61,7 @@ class PipelineRun(Base):
     )
 
     # Full LangGraph final state stored as JSON/JSONB
-    result: Mapped[dict | None] = mapped_column(
-        JSON().with_variant(JSONB, "postgresql"), nullable=True
-    )
+    result: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
 
     # Error message if failed
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -77,9 +74,7 @@ class PipelineRun(Base):
 
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     job: Mapped["Job"] = relationship("Job", back_populates="pipeline_runs", lazy="select")  # noqa: F821
@@ -99,9 +94,7 @@ class Application(Base):
 
     __tablename__ = "applications"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     candidate_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("candidates.id", ondelete="CASCADE"),
@@ -142,9 +135,7 @@ class Application(Base):
     recruiter_decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
     decision_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -157,12 +148,7 @@ class Application(Base):
         "Candidate", back_populates="applications", lazy="select"
     )
     job: Mapped["Job"] = relationship("Job", lazy="select")  # noqa: F821
-    pipeline_run: Mapped["PipelineRun"] = relationship(
-        "PipelineRun", back_populates="applications", lazy="select"
-    )
+    pipeline_run: Mapped["PipelineRun"] = relationship("PipelineRun", back_populates="applications", lazy="select")
 
     def __repr__(self) -> str:
-        return (
-            f"<Application id={self.id} candidate={self.candidate_id} "
-            f"job={self.job_id} stage={self.stage}>"
-        )
+        return f"<Application id={self.id} candidate={self.candidate_id} " f"job={self.job_id} stage={self.stage}>"

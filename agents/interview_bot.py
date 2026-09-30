@@ -7,13 +7,15 @@ candidate using Gemini and scores their responses on:
   • Communication clarity (0–10)
   • Relevance to JD (0–10)
 """
+
 import json
-import os
 import logging
+import os
 import time
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 from google import genai
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 from graph.state import RecruitmentState
 
 logger = logging.getLogger(__name__)
@@ -105,9 +107,10 @@ def interview_bot_node(state: RecruitmentState) -> dict:
             answers = _simulate_candidate_answers(questions, cand)
 
             qa_pairs = "\n".join(
-                [f"Q{i+1}: {q}\nA{i+1}: {a}" for i, (q, a) in enumerate(zip(questions, answers))]
+                [f"Q{i+1}: {q}\nA{i+1}: {a}" for i, (q, a) in enumerate(zip(questions, answers, strict=False))]
             )
             scores = _score_answers(role, qa_pairs)
+
             scores["candidate_id"] = cid
             scores["candidate_name"] = name
             scores["questions"] = questions

@@ -9,6 +9,7 @@ Two-stage extraction:
 
 Supports PDF (via PyMuPDF / pdfplumber fallback) and DOCX.
 """
+
 import io
 import logging
 import re
@@ -18,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
 _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b")
-_PHONE_RE = re.compile(
-    r"(\+?1?\s?)?(\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})"
-)
+_PHONE_RE = re.compile(r"(\+?1?\s?)?(\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})")
 _DATE_RANGE_RE = re.compile(
     r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4})"
     r"\s*(?:–|-|to)\s*"
@@ -30,23 +29,93 @@ _DATE_RANGE_RE = re.compile(
 
 # Common tech skills vocabulary (extensible)
 _SKILL_VOCAB: set[str] = {
-    "python", "java", "javascript", "typescript", "go", "rust", "c++", "c#", "ruby",
-    "fastapi", "django", "flask", "spring", "express", "react", "vue", "angular",
-    "postgresql", "mysql", "mongodb", "redis", "elasticsearch", "cassandra",
-    "docker", "kubernetes", "terraform", "ansible", "aws", "gcp", "azure",
-    "celery", "kafka", "rabbitmq", "airflow", "spark", "pandas", "numpy",
-    "scikit-learn", "tensorflow", "pytorch", "langchain", "langgraph",
-    "mlflow", "dvc", "git", "github", "gitlab", "jenkins", "github actions",
-    "rest", "graphql", "grpc", "websocket", "microservices", "ci/cd",
-    "nlp", "llm", "openai", "gemini", "hugging face", "spacy",
-    "sql", "nosql", "vector database", "chroma", "pinecone", "weaviate",
+    "python",
+    "java",
+    "javascript",
+    "typescript",
+    "go",
+    "rust",
+    "c++",
+    "c#",
+    "ruby",
+    "fastapi",
+    "django",
+    "flask",
+    "spring",
+    "express",
+    "react",
+    "vue",
+    "angular",
+    "postgresql",
+    "mysql",
+    "mongodb",
+    "redis",
+    "elasticsearch",
+    "cassandra",
+    "docker",
+    "kubernetes",
+    "terraform",
+    "ansible",
+    "aws",
+    "gcp",
+    "azure",
+    "celery",
+    "kafka",
+    "rabbitmq",
+    "airflow",
+    "spark",
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "tensorflow",
+    "pytorch",
+    "langchain",
+    "langgraph",
+    "mlflow",
+    "dvc",
+    "git",
+    "github",
+    "gitlab",
+    "jenkins",
+    "github actions",
+    "rest",
+    "graphql",
+    "grpc",
+    "websocket",
+    "microservices",
+    "ci/cd",
+    "nlp",
+    "llm",
+    "openai",
+    "gemini",
+    "hugging face",
+    "spacy",
+    "sql",
+    "nosql",
+    "vector database",
+    "chroma",
+    "pinecone",
+    "weaviate",
 }
 
 _EDUCATION_KEYWORDS = {
-    "bsc", "b.sc", "bachelor", "b.e", "b.tech",
-    "msc", "m.sc", "master", "m.e", "m.tech", "mba",
-    "phd", "ph.d", "doctorate",
-    "bootcamp", "certification", "certificate",
+    "bsc",
+    "b.sc",
+    "bachelor",
+    "b.e",
+    "b.tech",
+    "msc",
+    "m.sc",
+    "master",
+    "m.e",
+    "m.tech",
+    "mba",
+    "phd",
+    "ph.d",
+    "doctorate",
+    "bootcamp",
+    "certification",
+    "certificate",
 }
 
 _SECTION_HEADERS = re.compile(
@@ -58,10 +127,12 @@ _SECTION_HEADERS = re.compile(
 
 # ── Text extraction ───────────────────────────────────────────────────────────
 
+
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract text from PDF using PyMuPDF (fitz), fall back to pdfplumber."""
     try:
         import fitz  # PyMuPDF
+
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         text = "\n".join(page.get_text() for page in doc)
         doc.close()
@@ -72,10 +143,9 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 
     try:
         import pdfplumber
+
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-            return "\n".join(
-                page.extract_text() or "" for page in pdf.pages
-            )
+            return "\n".join(page.extract_text() or "" for page in pdf.pages)
     except Exception as exc:
         logger.error(f"pdfplumber also failed: {exc}")
         return ""
@@ -84,6 +154,7 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 def extract_text_from_docx(file_bytes: bytes) -> str:
     """Extract text from DOCX using python-docx."""
     from docx import Document
+
     doc = Document(io.BytesIO(file_bytes))
     return "\n".join(para.text for para in doc.paragraphs)
 
@@ -100,6 +171,7 @@ def extract_text(file_bytes: bytes, content_type: str) -> str:
 
 
 # ── Rule-based extraction ─────────────────────────────────────────────────────
+
 
 def _extract_email(text: str) -> str | None:
     m = _EMAIL_RE.search(text)
@@ -123,6 +195,7 @@ def _extract_name(text: str) -> str:
     # spaCy fallback
     try:
         import spacy
+
         nlp = spacy.load("en_core_web_sm")
         doc = nlp(text[:2000])
         for ent in doc.ents:
@@ -192,6 +265,7 @@ def _extract_previous_roles(text: str) -> list[str]:
     """
     try:
         import spacy
+
         nlp = spacy.load("en_core_web_sm")
         doc = nlp(text[:5000])
         roles = []
@@ -258,11 +332,8 @@ class ParsedResumeResult:
 
 class ResumeParsingPipeline:
     """Object-oriented wrapper for the two-stage resume parser."""
+
     def parse(self, text_or_bytes: str | bytes, content_type: str = "text/plain") -> ParsedResumeResult:
-        if isinstance(text_or_bytes, str):
-            file_bytes = text_or_bytes.encode("utf-8")
-        else:
-            file_bytes = text_or_bytes
+        file_bytes = text_or_bytes.encode("utf-8") if isinstance(text_or_bytes, str) else text_or_bytes
         data = parse_resume_rule_based(file_bytes, content_type)
         return ParsedResumeResult(data)
-

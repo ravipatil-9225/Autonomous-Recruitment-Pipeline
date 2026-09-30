@@ -2,30 +2,26 @@
 Celery Task Queue & Resume Parsing Unit Tests (§10.2, §11.2)
 ──────────────────────────────────────────────────────────────
 """
-from unittest.mock import patch, MagicMock
-import pytest
+
 from backend.app.services.parsing_pipeline import ResumeParsingPipeline
 
 
 def test_parsing_pipeline_contact_extraction():
     pipeline = ResumeParsingPipeline()
-    sample_text = """
-    John Doe
-    Senior Software Engineer
-    Email: john.doe@example.com
-    Phone: (555) 123-4567
-    LinkedIn: linkedin.com/in/johndoe
-    
-    Skills:
-    Python, FastAPI, Docker, PostgreSQL, React, Machine Learning
-    
-    Experience:
-    Senior Developer at Tech Corp (Jan 2020 - Present)
-    Built backend microservices using Python and FastAPI.
-    
-    Education:
-    Bachelor of Science in Computer Science, Stanford University (2016 - 2020)
-    """
+    sample_text = (
+        "John Doe\n"
+        "Senior Software Engineer\n"
+        "Email: john.doe@example.com\n"
+        "Phone: (555) 123-4567\n"
+        "LinkedIn: linkedin.com/in/johndoe\n\n"
+        "Skills:\n"
+        "Python, FastAPI, Docker, PostgreSQL, React, Machine Learning\n\n"
+        "Experience:\n"
+        "Senior Developer at Tech Corp (Jan 2020 - Present)\n"
+        "Built backend microservices using Python and FastAPI.\n\n"
+        "Education:\n"
+        "Bachelor of Science in Computer Science, Stanford University (2016 - 2020)\n"
+    )
 
     parsed = pipeline.parse(sample_text)
 

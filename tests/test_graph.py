@@ -2,13 +2,15 @@
 Tests: Graph shape, conditional routing, and dry-run integration.
 Avoids real LLM or embedding calls via monkeypatching.
 """
-import pytest
+
+from unittest.mock import MagicMock, patch
+
 import numpy as np
-from unittest.mock import patch, MagicMock
+
 from graph.state import initial_state
 
-
 # ── Routing Logic (tested directly) ───────────────────────────────────────────
+
 
 def test_conditional_routing_empty_above():
     """If above_threshold is empty, route to 'end'."""
@@ -28,6 +30,7 @@ def test_conditional_routing_with_candidates():
 
 # ── Graph dry-run (LLM nodes mocked via patch.object) ─────────────────────────
 
+
 def _make_mock_jd_analyzer(state):
     emb = np.ones(384).tolist()
     return {
@@ -41,9 +44,13 @@ def _make_mock_resume_parser(state):
     return {
         "parsed_candidates": [
             {
-                "id": "C1", "name": "Alice", "email": "a@e.com",
-                "skills": ["Python"], "experience_years": 5,
-                "education": "BSc CS", "summary": "Senior dev",
+                "id": "C1",
+                "name": "Alice",
+                "email": "a@e.com",
+                "skills": ["Python"],
+                "experience_years": 5,
+                "education": "BSc CS",
+                "summary": "Senior dev",
                 "embedding": emb,
             }
         ]
@@ -53,10 +60,7 @@ def _make_mock_resume_parser(state):
 def _make_mock_scheduler(state):
     above = state.get("above_threshold", [])
     return {
-        "scheduled_interviews": [
-            {**c, "interview_slot": {"booking_id": "MOCK01", "slot": "Mon 10:00"}}
-            for c in above
-        ]
+        "scheduled_interviews": [{**c, "interview_slot": {"booking_id": "MOCK01", "slot": "Mon 10:00"}} for c in above]
     }
 
 
@@ -64,10 +68,15 @@ def _make_mock_interview_bot(state):
     return {
         "interview_scores": [
             {
-                "candidate_id": "C1", "candidate_name": "Alice",
-                "overall_interview_score": 8, "summary": "Good",
-                "technical_depth": 8, "communication_clarity": 7,
-                "relevance_to_jd": 8, "questions": ["Q1"], "answers": ["A1"],
+                "candidate_id": "C1",
+                "candidate_name": "Alice",
+                "overall_interview_score": 8,
+                "summary": "Good",
+                "technical_depth": 8,
+                "communication_clarity": 7,
+                "relevance_to_jd": 8,
+                "questions": ["Q1"],
+                "answers": ["A1"],
             }
         ]
     }
@@ -80,7 +89,6 @@ def test_graph_dry_run_completes():
     in sys.modules before importing the orchestrator so the test is fully offline.
     """
     import sys
-    from unittest.mock import MagicMock
 
     # Stub modules that require API keys / heavy downloads
     stubs = {
@@ -103,10 +111,12 @@ def test_graph_dry_run_completes():
 
         import graph.orchestrator as orch_mod
 
-        with patch.object(orch_mod, "jd_analyzer_node", side_effect=_make_mock_jd_analyzer), \
-             patch.object(orch_mod, "resume_parser_node", side_effect=_make_mock_resume_parser), \
-             patch.object(orch_mod, "interview_scheduler_node", side_effect=_make_mock_scheduler), \
-             patch.object(orch_mod, "interview_bot_node", side_effect=_make_mock_interview_bot):
+        with (
+            patch.object(orch_mod, "jd_analyzer_node", side_effect=_make_mock_jd_analyzer),
+            patch.object(orch_mod, "resume_parser_node", side_effect=_make_mock_resume_parser),
+            patch.object(orch_mod, "interview_scheduler_node", side_effect=_make_mock_scheduler),
+            patch.object(orch_mod, "interview_bot_node", side_effect=_make_mock_interview_bot),
+        ):
 
             app = orch_mod.build_graph(use_checkpointer=False)
             state = initial_state(

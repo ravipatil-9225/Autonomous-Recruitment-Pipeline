@@ -2,6 +2,7 @@
 Job Management API Tests (§11.1)
 ───────────────────────────────────
 """
+
 import pytest
 from httpx import AsyncClient
 
@@ -9,7 +10,7 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_create_and_get_job(async_client: AsyncClient, recruiter_headers):
     headers = {"Authorization": recruiter_headers["Authorization"]}
-    
+
     # 1. Create job
     create_payload = {
         "title": "Senior AI Engineer",
@@ -31,9 +32,7 @@ async def test_create_and_get_job(async_client: AsyncClient, recruiter_headers):
 
 
 @pytest.mark.asyncio
-async def test_job_lifecycle_state_transitions(
-    async_client: AsyncClient, recruiter_headers, hiring_manager_headers
-):
+async def test_job_lifecycle_state_transitions(async_client: AsyncClient, recruiter_headers, hiring_manager_headers):
     r_headers = {"Authorization": recruiter_headers["Authorization"]}
     hm_headers = {"Authorization": hiring_manager_headers["Authorization"]}
 
@@ -80,4 +79,3 @@ async def test_list_jobs(async_client: AsyncClient, recruiter_headers):
     data = list_resp.json()
     assert data["total"] == 2
     assert len(data["items"]) == 2
-

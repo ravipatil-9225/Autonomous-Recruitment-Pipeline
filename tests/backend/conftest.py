@@ -7,19 +7,20 @@ Sets up:
   • FastAPI AsyncClient with dependency overrides
   • Authenticated user tokens & headers for RBAC testing (admin, recruiter, hiring_manager, viewer)
 """
-import uuid
-from typing import AsyncGenerator
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-from backend.app.main import app
+import uuid
+from collections.abc import AsyncGenerator
+
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from backend.app.core.security import create_access_token, hash_password
 from backend.app.db.base import Base
 from backend.app.db.session import get_db
 from backend.app.dependencies import get_redis
+from backend.app.main import app
 from backend.app.models.user import User, UserRole
-from backend.app.core.security import hash_password, create_access_token
 
 # Async SQLite setup for test database (shared cache so in-memory DB persists across connections)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///file:memdb1?mode=memory&cache=shared&uri=true"
@@ -30,6 +31,7 @@ TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_
 
 class FakeRedis:
     """In-memory Redis fake for test environment."""
+
     def __init__(self):
         self._store = {}
 

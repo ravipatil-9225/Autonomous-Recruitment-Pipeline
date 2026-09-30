@@ -4,13 +4,14 @@ Agent 2 – Resume Parser
 Bulk-parses candidate resumes (plain text / PDF) using Gemini
 and extracts structured candidate profiles.
 """
+
 import json
-import os
 import logging
-from tenacity import retry, stop_after_attempt, wait_exponential
+import os
 
 from google import genai
 from sentence_transformers import SentenceTransformer
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from graph.state import RecruitmentState
 

@@ -3,9 +3,10 @@ Job Service  (§11.1)
 ─────────────────────
 CRUD + state machine for Job / Requisition management.
 """
+
 import math
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -60,16 +61,12 @@ class JobService:
             query = query.where(Job.status == status_enum)
 
         # Total count
-        count_result = await self.db.execute(
-            select(func.count()).select_from(query.subquery())
-        )
+        count_result = await self.db.execute(select(func.count()).select_from(query.subquery()))
         total = count_result.scalar_one()
 
         # Paginated items
         offset = (page - 1) * page_size
-        result = await self.db.execute(
-            query.order_by(Job.created_at.desc()).offset(offset).limit(page_size)
-        )
+        result = await self.db.execute(query.order_by(Job.created_at.desc()).offset(offset).limit(page_size))
         jobs = result.scalars().all()
 
         return PaginatedJobsResponse(
@@ -109,7 +106,7 @@ class JobService:
                 detail=f"Only draft jobs can be published. Current status: {job.status}",
             )
         job.status = JobStatus.open
-        job.published_at = datetime.now(timezone.utc)
+        job.published_at = datetime.now(UTC)
         await self.db.commit()
         await self.db.refresh(job)
         return JobResponse.model_validate(job)
@@ -123,7 +120,7 @@ class JobService:
                 detail=f"Only open jobs can be closed. Current status: {job.status}",
             )
         job.status = JobStatus.closed
-        job.closed_at = datetime.now(timezone.utc)
+        job.closed_at = datetime.now(UTC)
         await self.db.commit()
         await self.db.refresh(job)
         return JobResponse.model_validate(job)

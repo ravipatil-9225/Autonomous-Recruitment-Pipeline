@@ -4,9 +4,10 @@ Resume Celery Tasks  (§11.2 + §10.2)
 parse_resume_task   — download from S3, parse, embed, persist to DB + Chroma
 bulk_parse_task     — fan-out group of parse_resume_task for a batch upload
 """
+
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from celery import group
 
@@ -39,10 +40,10 @@ def parse_resume_task(self, resume_id: str, s3_key: str, content_type: str) -> d
     from sqlalchemy.orm import Session
 
     from backend.app.config import settings
+    from backend.app.core.security import decrypt_pii, encrypt_pii, hash_email
     from backend.app.models.candidate import Candidate, Resume
     from backend.app.services import storage_service
     from backend.app.services.parsing_pipeline import parse_resume_rule_based
-    from backend.app.core.security import decrypt_pii, encrypt_pii, hash_email
 
     logger.info(f"[parse_resume_task] Starting for resume_id={resume_id}")
 
@@ -68,9 +69,7 @@ def parse_resume_task(self, resume_id: str, s3_key: str, content_type: str) -> d
             parsed = parse_resume_rule_based(file_bytes, content_type)
 
             # 3. Update candidate PII with real extracted values
-            candidate = db.execute(
-                select(Candidate).where(Candidate.id == resume.candidate_id)
-            ).scalar_one_or_none()
+            candidate = db.execute(select(Candidate).where(Candidate.id == resume.candidate_id)).scalar_one_or_none()
             if candidate and candidate.name_encrypted:
                 existing_name = decrypt_pii(candidate.name_encrypted)
                 if existing_name == "Pending Parse":
@@ -85,30 +84,29 @@ def parse_resume_task(self, resume_id: str, s3_key: str, content_type: str) -> d
 
             # 4. Generate embedding (reuse Phase-1 embedder)
             from sentence_transformers import SentenceTransformer
+
             embedder = SentenceTransformer("all-MiniLM-L6-v2")
-            embed_text = (
-                f"{parsed.get('summary', '')} "
-                f"{' '.join(parsed.get('skills', []))}"
-            )
+            embed_text = f"{parsed.get('summary', '')} " f"{' '.join(parsed.get('skills', []))}"
             embedding = embedder.encode(embed_text).tolist()
 
             # 5. Store embedding in Chroma
             embedding_id = str(uuid.uuid4())
             try:
                 import chromadb
-                chroma = chromadb.HttpClient(
-                    host=settings.chroma_host, port=settings.chroma_port
-                )
+
+                chroma = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
                 collection = chroma.get_or_create_collection("resume_embeddings")
                 collection.add(
                     ids=[embedding_id],
                     embeddings=[embedding],
-                    metadatas=[{
-                        "resume_id": resume_id,
-                        "candidate_id": str(resume.candidate_id),
-                        "skills": ", ".join(parsed.get("skills", [])),
-                        "experience_years": parsed.get("experience_years", 0),
-                    }],
+                    metadatas=[
+                        {
+                            "resume_id": resume_id,
+                            "candidate_id": str(resume.candidate_id),
+                            "skills": ", ".join(parsed.get("skills", [])),
+                            "experience_years": parsed.get("experience_years", 0),
+                        }
+                    ],
                 )
                 logger.info(f"Embedding stored in Chroma: {embedding_id}")
             except Exception as chroma_exc:
@@ -119,7 +117,7 @@ def parse_resume_task(self, resume_id: str, s3_key: str, content_type: str) -> d
             resume.parsed_data = parsed
             resume.embedding_id = embedding_id
             resume.parse_status = "done"
-            resume.parsed_at = datetime.now(timezone.utc)
+            resume.parsed_at = datetime.now(UTC)
             db.commit()
 
             logger.info(f"[parse_resume_task] Done for resume_id={resume_id}")
@@ -174,18 +172,14 @@ def bulk_parse_task(job_id: str, resume_ids: list[str]) -> dict:
             result = db.execute(select(Resume).where(Resume.id == uuid.UUID(rid)))
             resume = result.scalar_one_or_none()
             if resume:
-                tasks.append(
-                    parse_resume_task.s(rid, resume.s3_key, resume.content_type)
-                )
+                tasks.append(parse_resume_task.s(rid, resume.s3_key, resume.content_type))
     engine.dispose()
 
     if tasks:
         # Execute all in parallel
         job = group(tasks)
         result = job.apply_async()
-        logger.info(
-            f"[bulk_parse_task] Dispatched {len(tasks)} parse tasks for job_id={job_id}"
-        )
+        logger.info(f"[bulk_parse_task] Dispatched {len(tasks)} parse tasks for job_id={job_id}")
         return {"job_id": job_id, "dispatched": len(tasks), "group_id": result.id}
     else:
         return {"job_id": job_id, "dispatched": 0}

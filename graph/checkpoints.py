@@ -7,8 +7,9 @@ Default: MemorySaver (always available, state lives in-process).
 Optional: SqliteSaver for persistent cross-process state
           (install langgraph-checkpoint-sqlite and set USE_SQLITE_CHECKPOINT=true).
 """
-import os
+
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,13 @@ def get_checkpointer():
     if USE_SQLITE:
         try:
             from langgraph.checkpoint.sqlite import SqliteSaver
+
             logger.info(f"  📁 Using SqliteSaver: {CHECKPOINT_DB_PATH}")
             return SqliteSaver.from_conn_string(CHECKPOINT_DB_PATH)
         except ImportError:
             logger.warning("  ⚠️  langgraph-checkpoint-sqlite not installed. Falling back to MemorySaver.")
 
     from langgraph.checkpoint.memory import MemorySaver
+
     logger.info("  🧠 Using MemorySaver (in-memory checkpointer).")
     return MemorySaver()

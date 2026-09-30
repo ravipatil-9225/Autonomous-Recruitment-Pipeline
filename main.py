@@ -8,9 +8,9 @@ Usage:
   # Dry-run with mock data (no HITL, no checkpointing):
   python main.py --dry-run
 """
+
 import argparse
 import io
-import json
 import logging
 import sys
 import uuid
@@ -104,6 +104,7 @@ MOCK_CANDIDATES = [
 
 # ── Pipeline Runner ────────────────────────────────────────────────────────────
 
+
 def run_pipeline(dry_run: bool = False) -> None:
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
@@ -126,7 +127,7 @@ def run_pipeline(dry_run: bool = False) -> None:
 
     # ── PHASE 1: Run until HITL interrupt ──
     logger.info("\n▶ Phase 1: Running pipeline until recruiter review...\n")
-    for event in app.stream(state, config=config, stream_mode="values"):
+    for _ in app.stream(state, config=config, stream_mode="values"):
         pass  # Events are logged within each node
 
     # ── HITL: Get recruiter input ──
@@ -144,7 +145,7 @@ def run_pipeline(dry_run: bool = False) -> None:
     for r in ranking:
         print(f"  #{r['rank']} {r['name']:<20} Score: {r['final_score']:.4f}")
 
-    print(f"\n🔍 Fairness Flags:")
+    print("\n🔍 Fairness Flags:")
     for flag in fairness.get("bias_flags", []):
         print(f"  {flag}")
 
@@ -160,7 +161,7 @@ def run_pipeline(dry_run: bool = False) -> None:
     # ── PHASE 2: Resume after recruiter input ──
     logger.info(f"\n▶ Phase 2: Resuming with decision → '{decision}'...\n")
     app.update_state(config, {"recruiter_decision": decision})
-    for event in app.stream(None, config=config, stream_mode="values"):
+    for _ in app.stream(None, config=config, stream_mode="values"):
         pass
 
     final_snapshot = app.get_state(config)

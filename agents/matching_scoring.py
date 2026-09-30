@@ -6,10 +6,12 @@ embedding, applies rule-based hard filters, and splits candidates
 into above/below threshold buckets. Sends auto-rejection mock email
 to below-threshold candidates.
 """
-import os
+
 import logging
-from sklearn.metrics.pairwise import cosine_similarity
+import os
+
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 from graph.state import RecruitmentState
 
@@ -60,12 +62,14 @@ def matching_scoring_node(state: RecruitmentState) -> dict:
             # Hard filter: must meet minimum experience
             adjusted_score = sim_score if exp_ok else sim_score * 0.5
 
-            scored.append({
-                **cand,
-                "similarity_score": round(sim_score, 4),
-                "adjusted_score": round(adjusted_score, 4),
-                "meets_experience": exp_ok,
-            })
+            scored.append(
+                {
+                    **cand,
+                    "similarity_score": round(sim_score, 4),
+                    "adjusted_score": round(adjusted_score, 4),
+                    "meets_experience": exp_ok,
+                }
+            )
         except Exception as exc:
             logger.error(f"  ✘ Scoring error for {cand.get('id')}: {exc}")
             errors.append(f"matching_scoring[{cand.get('id')}]: {exc}")

@@ -4,9 +4,10 @@ MLflow Tracking Integration
 Logs recruiter decisions and pipeline metadata to MLflow for
 model retraining tracking. Tracked via MLflow experiment runs.
 """
-import os
-import logging
+
 import json
+import logging
+import os
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -42,8 +43,7 @@ def log_recruiter_decision(state: dict) -> None:
             # Log metrics
             if ranking:
                 mlflow.log_metric("top_candidate_score", ranking[0]["final_score"])
-                mlflow.log_metric("avg_final_score",
-                                  sum(c["final_score"] for c in ranking) / len(ranking))
+                mlflow.log_metric("avg_final_score", sum(c["final_score"] for c in ranking) / len(ranking))
             if fairness:
                 gini = fairness.get("gini_coefficient", 0)
                 mlflow.log_metric("gini_coefficient", gini)

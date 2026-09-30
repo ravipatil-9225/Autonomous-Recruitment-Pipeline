@@ -1,19 +1,29 @@
 """
 Tests: Shared Pipeline State
 """
-import pytest
-from graph.state import RecruitmentState, initial_state
+
+from graph.state import initial_state
 
 
 def test_initial_state_keys():
     """All required state keys must exist after initialization."""
     state = initial_state(job_description="Test JD", candidates=[])
     expected_keys = [
-        "job_description", "jd_structured", "jd_embedding",
-        "candidates", "parsed_candidates", "scored_candidates",
-        "above_threshold", "below_threshold", "scheduled_interviews",
-        "interview_scores", "final_ranking", "fairness_report",
-        "recruiter_decision", "retries", "errors",
+        "job_description",
+        "jd_structured",
+        "jd_embedding",
+        "candidates",
+        "parsed_candidates",
+        "scored_candidates",
+        "above_threshold",
+        "below_threshold",
+        "scheduled_interviews",
+        "interview_scores",
+        "final_ranking",
+        "fairness_report",
+        "recruiter_decision",
+        "retries",
+        "errors",
     ]
     for key in expected_keys:
         assert key in state, f"Missing key: {key}"

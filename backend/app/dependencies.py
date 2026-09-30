@@ -7,6 +7,7 @@ Provides reusable dependency functions injected into route handlers:
   • get_current_active_user() — above + is_active check
   • require_roles(...)     — RBAC wrapper
 """
+
 import uuid
 from typing import Annotated
 
@@ -21,7 +22,7 @@ from backend.app.config import settings
 from backend.app.core import rbac
 from backend.app.core.security import decode_token
 from backend.app.db.session import get_db
-from backend.app.models.user import User, UserRole
+from backend.app.models.user import User
 
 # OAuth2 scheme — token from Authorization: Bearer <token>
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -34,13 +35,12 @@ async def get_redis() -> aioredis.Redis:
     """Return a shared async Redis client."""
     global _redis_client
     if _redis_client is None:
-        _redis_client = aioredis.from_url(
-            settings.redis_url, encoding="utf-8", decode_responses=True
-        )
+        _redis_client = aioredis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
     return _redis_client
 
 
 # ── Current user resolution ───────────────────────────────────────────────────
+
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
@@ -69,9 +69,7 @@ async def get_current_user(
     if await redis.get(f"revoked:{token}"):
         raise credentials_exc
 
-    result = await db.execute(
-        select(User).where(User.id == uuid.UUID(user_id))
-    )
+    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exc

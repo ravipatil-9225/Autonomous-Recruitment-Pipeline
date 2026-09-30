@@ -4,11 +4,12 @@ ORM Model: Job / Requisition  (§11.1)
 Stores the raw JD text and the structured requirements extracted
 by the JD Analyzer agent.
 """
+
 import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, JSON, String, Text, func
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,9 +28,7 @@ class Job(Base):
 
     __tablename__ = "jobs"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     department: Mapped[str | None] = mapped_column(String(255), nullable=True)
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -54,15 +53,9 @@ class Job(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    published_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    closed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -71,9 +64,7 @@ class Job(Base):
     )
 
     # Relationships
-    created_by_user: Mapped["User"] = relationship(  # noqa: F821
-        "User", back_populates="jobs", lazy="select"
-    )
+    created_by_user: Mapped["User"] = relationship("User", back_populates="jobs", lazy="select")  # noqa: F821
     pipeline_runs: Mapped[list["PipelineRun"]] = relationship(  # noqa: F821
         "PipelineRun", back_populates="job", lazy="select"
     )

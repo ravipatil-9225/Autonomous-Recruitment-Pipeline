@@ -4,6 +4,7 @@ Auth Service
 Business logic for login, token management, and user creation.
 Refresh tokens are stored in Redis (with TTL) for revocation support.
 """
+
 import uuid
 from datetime import timedelta
 
@@ -48,6 +49,7 @@ class AuthService:
     # ── Refresh ────────────────────────────────────────────────────────────
     async def refresh(self, refresh_token: str) -> TokenResponse:
         from jose import JWTError
+
         try:
             payload = decode_token(refresh_token)
         except JWTError:
@@ -126,9 +128,7 @@ class AuthService:
 
     # ── Helpers ────────────────────────────────────────────────────────────
     async def _get_user_by_email(self, email: str) -> User | None:
-        result = await self.db.execute(
-            select(User).where(User.email == email.lower())
-        )
+        result = await self.db.execute(select(User).where(User.email == email.lower()))
         return result.scalar_one_or_none()
 
     async def _issue_tokens(self, user: User) -> TokenResponse:

@@ -9,10 +9,11 @@ Handles:
   • Celery task dispatch
   • Right-to-deletion (PII wipe + S3 + Chroma cleanup)
 """
+
 import hashlib
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
@@ -20,12 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.config import settings
-from backend.app.core.security import decrypt_pii, encrypt_pii, hash_email
+from backend.app.core.security import encrypt_pii, hash_email
 from backend.app.models.candidate import Candidate, Resume
 from backend.app.models.consent import ConsentRecord
 from backend.app.schemas.candidate import (
     BulkUploadResponse,
-    CandidateResponse,
     DeleteCandidateResponse,
     ParsedResumeResponse,
     ResumeUploadResponse,
@@ -140,9 +140,7 @@ class ResumeService:
     # ── Right-to-deletion ─────────────────────────────────────────────────
     async def delete_candidate_pii(self, candidate_id: uuid.UUID) -> DeleteCandidateResponse:
         result = await self.db.execute(
-            select(Candidate)
-            .options(selectinload(Candidate.consent))
-            .where(Candidate.id == candidate_id)
+            select(Candidate).options(selectinload(Candidate.consent)).where(Candidate.id == candidate_id)
         )
         candidate = result.scalar_one_or_none()
         if not candidate:
@@ -157,13 +155,11 @@ class ResumeService:
 
         # Mark consent record as deleted
         if candidate.consent:
-            candidate.consent.deleted_at = datetime.now(timezone.utc)
+            candidate.consent.deleted_at = datetime.now(UTC)
 
         # 2. Delete S3 files
         s3_deleted = 0
-        resume_result = await self.db.execute(
-            select(Resume).where(Resume.candidate_id == candidate_id)
-        )
+        resume_result = await self.db.execute(select(Resume).where(Resume.candidate_id == candidate_id))
         resumes = resume_result.scalars().all()
         for resume in resumes:
             if storage_service.delete_resume(resume.s3_key):
@@ -178,9 +174,8 @@ class ResumeService:
         if embedding_ids:
             try:
                 import chromadb
-                chroma = chromadb.HttpClient(
-                    host=settings.chroma_host, port=settings.chroma_port
-                )
+
+                chroma = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
                 collection = chroma.get_collection("resume_embeddings")
                 collection.delete(ids=embedding_ids)
                 chroma_deleted = len(embedding_ids)
@@ -189,8 +184,7 @@ class ResumeService:
 
         await self.db.commit()
         logger.info(
-            f"Right-to-deletion executed: candidate={candidate_id}, "
-            f"S3={s3_deleted}, Chroma={chroma_deleted}"
+            f"Right-to-deletion executed: candidate={candidate_id}, " f"S3={s3_deleted}, Chroma={chroma_deleted}"
         )
         return DeleteCandidateResponse(
             candidate_id=candidate_id,
@@ -205,10 +199,7 @@ class ResumeService:
         content_type = file.content_type or ""
         # Normalise DOCX content-type if browser sends octet-stream
         if file.filename and file.filename.lower().endswith(".docx"):
-            content_type = (
-                "application/vnd.openxmlformats-officedocument"
-                ".wordprocessingml.document"
-            )
+            content_type = "application/vnd.openxmlformats-officedocument" ".wordprocessingml.document"
         if content_type not in _ALLOWED_CONTENT_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -226,9 +217,7 @@ class ResumeService:
         self, email: str, name: str, consent_source: str
     ) -> tuple[ConsentRecord, Candidate]:
         email_h = hash_email(email)
-        result = await self.db.execute(
-            select(Candidate).where(Candidate.email_hash == email_h)
-        )
+        result = await self.db.execute(select(Candidate).where(Candidate.email_hash == email_h))
         candidate = result.scalar_one_or_none()
         if candidate:
             return candidate.consent, candidate
@@ -250,9 +239,7 @@ class ResumeService:
         return consent, candidate
 
     async def _get_resume_or_404(self, resume_id: uuid.UUID) -> Resume:
-        result = await self.db.execute(
-            select(Resume).where(Resume.id == resume_id)
-        )
+        result = await self.db.execute(select(Resume).where(Resume.id == resume_id))
         resume = result.scalar_one_or_none()
         if not resume:
             raise HTTPException(status_code=404, detail=f"Resume {resume_id} not found")

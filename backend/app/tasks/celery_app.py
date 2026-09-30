@@ -8,6 +8,7 @@ Two queues:
 
 Beat schedule stub is included for future periodic jobs (e.g., retraining).
 """
+
 from celery import Celery
 
 from backend.app.config import settings
@@ -39,7 +40,7 @@ celery_app.conf.update(
         "backend.app.tasks.pipeline_tasks.*": {"queue": "pipeline_queue"},
     },
     # Retry defaults
-    task_acks_late=True,        # Ack only after success (safer for long tasks)
+    task_acks_late=True,  # Ack only after success (safer for long tasks)
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,  # One task at a time per worker (for long tasks)
     # Beat schedule (stub — extend in Phase 3)

@@ -2,10 +2,12 @@
 Auth Endpoints & Security Tests (§12 Security, JWT/OAuth2)
 ─────────────────────────────────────────────────────────────
 """
+
 import pytest
 from httpx import AsyncClient
+
+from backend.app.core.security import decrypt_pii, encrypt_pii, hash_password
 from backend.app.models.user import User, UserRole
-from backend.app.core.security import hash_password, encrypt_pii, decrypt_pii
 
 
 @pytest.mark.asyncio

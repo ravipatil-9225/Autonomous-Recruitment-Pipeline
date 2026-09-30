@@ -7,6 +7,7 @@ Endpoints:
   POST /auth/logout   — revoke tokens
   GET  /auth/me       — current user info
 """
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 

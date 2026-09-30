@@ -7,17 +7,24 @@ Endpoints:
   POST   /api/v1/pipeline/{run_id}/decision — submit HITL recruiter decision
   WS     /ws/pipeline/{run_id}        — live status stream (WebSocket)
 """
-import asyncio
-import json
-import uuid
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+import asyncio
+import uuid
+from datetime import UTC, datetime
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.rbac import require_min_role, require_roles
-from backend.app.dependencies import CurrentUser, DBSession
+from backend.app.dependencies import DBSession
 from backend.app.models.application import Application, PipelineRun, PipelineStatus
 from backend.app.models.user import User, UserRole
 from backend.app.schemas.pipeline import (
@@ -50,11 +57,8 @@ async def trigger_pipeline(
     # Resolve resume_ids: use provided list or all parsed resumes for the job
     if not body.resume_ids:
         from backend.app.models.candidate import Resume
-        result = await db.execute(
-            select(Resume).where(
-                Resume.parse_status == "done"
-            )
-        )
+
+        result = await db.execute(select(Resume).where(Resume.parse_status == "done"))
         resumes = result.scalars().all()
         resume_ids = [r.id for r in resumes]
     else:
@@ -128,9 +132,7 @@ async def submit_decision(
     Updates all Application rows for this run.
     """
     if body.decision not in ("hire", "no_hire"):
-        raise HTTPException(
-            status_code=422, detail="Decision must be 'hire' or 'no_hire'"
-        )
+        raise HTTPException(status_code=422, detail="Decision must be 'hire' or 'no_hire'")
     result = await db.execute(select(PipelineRun).where(PipelineRun.id == run_id))
     run = result.scalar_one_or_none()
     if not run:
@@ -142,9 +144,7 @@ async def submit_decision(
         )
 
     # Update all applications in this run
-    apps_result = await db.execute(
-        select(Application).where(Application.pipeline_run_id == run_id)
-    )
+    apps_result = await db.execute(select(Application).where(Application.pipeline_run_id == run_id))
     apps = apps_result.scalars().all()
     for app in apps:
         app.recruiter_decision = body.decision
@@ -165,8 +165,8 @@ async def submit_decision(
     }
 
 
-
 # ── WebSocket: Live Pipeline Status ──────────────────────────────────────────
+
 
 @router.websocket("/ws/pipeline/{run_id}")
 async def pipeline_ws(run_id: uuid.UUID, websocket: WebSocket, db: AsyncSession = Depends(lambda: None)):
@@ -182,9 +182,7 @@ async def pipeline_ws(run_id: uuid.UUID, websocket: WebSocket, db: AsyncSession 
     try:
         while True:
             async with async_session() as session:
-                result = await session.execute(
-                    select(PipelineRun).where(PipelineRun.id == run_id)
-                )
+                result = await session.execute(select(PipelineRun).where(PipelineRun.id == run_id))
                 run = result.scalar_one_or_none()
 
             if not run:
@@ -196,7 +194,7 @@ async def pipeline_ws(run_id: uuid.UUID, websocket: WebSocket, db: AsyncSession 
                 payload = {
                     "run_id": str(run_id),
                     "status": current_status,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
                 if run.result:
                     payload["summary"] = {

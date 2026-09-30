@@ -4,6 +4,7 @@ FastAPI Application Factory
 Main entrypoint for the ARP backend API.
 Run with: uvicorn backend.app.main:app --reload
 """
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -34,8 +36,10 @@ async def lifespan(app: FastAPI):
 
     # 1. Database
     from backend.app.db.session import engine
+
     try:
         from sqlalchemy import text
+
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         logger.info("✔ PostgreSQL connected.")
@@ -45,6 +49,7 @@ async def lifespan(app: FastAPI):
     # 2. Redis
     try:
         import redis.asyncio as aioredis
+
         r = aioredis.from_url(settings.redis_url)
         await r.ping()
         await r.aclose()
@@ -55,6 +60,7 @@ async def lifespan(app: FastAPI):
     # 3. S3 / MinIO bucket
     try:
         from backend.app.services import storage_service
+
         storage_service.ensure_bucket_exists()
         logger.info("✔ S3/MinIO bucket ready.")
     except Exception as exc:
@@ -63,6 +69,7 @@ async def lifespan(app: FastAPI):
     # 4. Chroma
     try:
         import chromadb
+
         chroma = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port)
         chroma.heartbeat()
         logger.info("✔ Chroma vector DB connected.")
@@ -79,6 +86,7 @@ async def lifespan(app: FastAPI):
 
 
 # ── App Factory ───────────────────────────────────────────────────────────────
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -106,10 +114,10 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────
     from backend.app.auth.router import router as auth_router
-    from backend.app.routers.jobs import router as jobs_router
-    from backend.app.routers.resumes import router as resumes_router
-    from backend.app.routers.pipeline import router as pipeline_router
     from backend.app.routers.admin import router as admin_router
+    from backend.app.routers.jobs import router as jobs_router
+    from backend.app.routers.pipeline import router as pipeline_router
+    from backend.app.routers.resumes import router as resumes_router
 
     app.include_router(auth_router)
     app.include_router(jobs_router)
@@ -119,6 +127,7 @@ def create_app() -> FastAPI:
 
     # ── Static Frontend Dashboard ─────────────────────────────────────────
     import os
+
     from fastapi.staticfiles import StaticFiles
 
     frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend")
@@ -132,15 +141,16 @@ def create_app() -> FastAPI:
 
     @app.get("/", tags=["Health"], include_in_schema=False)
     async def root() -> JSONResponse:
-        return JSONResponse({
-            "name": settings.app_title,
-            "version": settings.app_version,
-            "docs": "/docs",
-            "dashboard": "/dashboard/",
-        })
+        return JSONResponse(
+            {
+                "name": settings.app_title,
+                "version": settings.app_version,
+                "docs": "/docs",
+                "dashboard": "/dashboard/",
+            }
+        )
 
     return app
-
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

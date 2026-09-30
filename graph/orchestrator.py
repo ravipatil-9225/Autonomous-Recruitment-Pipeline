@@ -22,24 +22,27 @@ Graph flow:
             → log_decision
             → END
 """
-import logging
-from langgraph.graph import StateGraph, END
 
-from graph.state import RecruitmentState
-from graph.checkpoints import get_checkpointer
-from agents.jd_analyzer import jd_analyzer_node
-from agents.resume_parser import resume_parser_node
-from agents.matching_scoring import matching_scoring_node
-from agents.interview_scheduler import interview_scheduler_node
-from agents.interview_bot import interview_bot_node
-from agents.evaluation_ranking import evaluation_ranking_node
+import logging
+
+from langgraph.graph import END, StateGraph
+
 from agents.bias_audit import bias_audit_node
+from agents.evaluation_ranking import evaluation_ranking_node
+from agents.interview_bot import interview_bot_node
+from agents.interview_scheduler import interview_scheduler_node
+from agents.jd_analyzer import jd_analyzer_node
+from agents.matching_scoring import matching_scoring_node
+from agents.resume_parser import resume_parser_node
+from graph.checkpoints import get_checkpointer
+from graph.state import RecruitmentState
 from tools.mlflow_tracker import log_recruiter_decision
 
 logger = logging.getLogger(__name__)
 
 
 # ── Conditional Routing ────────────────────────────────────────────────────────
+
 
 def route_after_scoring(state: RecruitmentState) -> str:
     """
@@ -58,6 +61,7 @@ def route_after_scoring(state: RecruitmentState) -> str:
 
 # ── HITL Node: Recruiter Review ────────────────────────────────────────────────
 
+
 def recruiter_review_node(state: RecruitmentState) -> dict:
     """
     Human-in-the-loop pause node.
@@ -71,6 +75,7 @@ def recruiter_review_node(state: RecruitmentState) -> dict:
 
 # ── Post-Decision: MLflow Log ──────────────────────────────────────────────────
 
+
 def log_decision_node(state: RecruitmentState) -> dict:
     """Logs recruiter decision and pipeline artifacts to MLflow."""
     logger.info("▶ MLflow Tracker: Logging decision for retraining pipeline...")
@@ -79,6 +84,7 @@ def log_decision_node(state: RecruitmentState) -> dict:
 
 
 # ── Graph Builder ──────────────────────────────────────────────────────────────
+
 
 def build_graph(use_checkpointer: bool = True):
     """
@@ -93,20 +99,20 @@ def build_graph(use_checkpointer: bool = True):
     graph = StateGraph(RecruitmentState)
 
     # ── Register all nodes ──
-    graph.add_node("jd_analyzer",          jd_analyzer_node)
-    graph.add_node("resume_parser",        resume_parser_node)
-    graph.add_node("matching_scoring",     matching_scoring_node)
-    graph.add_node("interview_scheduler",  interview_scheduler_node)
-    graph.add_node("interview_bot",        interview_bot_node)
-    graph.add_node("evaluation_ranking",   evaluation_ranking_node)
-    graph.add_node("bias_audit",           bias_audit_node)
-    graph.add_node("recruiter_review",     recruiter_review_node)
-    graph.add_node("log_decision",         log_decision_node)
+    graph.add_node("jd_analyzer", jd_analyzer_node)
+    graph.add_node("resume_parser", resume_parser_node)
+    graph.add_node("matching_scoring", matching_scoring_node)
+    graph.add_node("interview_scheduler", interview_scheduler_node)
+    graph.add_node("interview_bot", interview_bot_node)
+    graph.add_node("evaluation_ranking", evaluation_ranking_node)
+    graph.add_node("bias_audit", bias_audit_node)
+    graph.add_node("recruiter_review", recruiter_review_node)
+    graph.add_node("log_decision", log_decision_node)
 
     # ── Define edges ──
     graph.set_entry_point("jd_analyzer")
-    graph.add_edge("jd_analyzer",         "resume_parser")
-    graph.add_edge("resume_parser",       "matching_scoring")
+    graph.add_edge("jd_analyzer", "resume_parser")
+    graph.add_edge("resume_parser", "matching_scoring")
 
     # Conditional: route after scoring
     graph.add_conditional_edges(
@@ -114,16 +120,16 @@ def build_graph(use_checkpointer: bool = True):
         route_after_scoring,
         {
             "continue": "interview_scheduler",
-            "end":      END,
+            "end": END,
         },
     )
 
     graph.add_edge("interview_scheduler", "interview_bot")
-    graph.add_edge("interview_bot",       "evaluation_ranking")
-    graph.add_edge("evaluation_ranking",  "bias_audit")
-    graph.add_edge("bias_audit",          "recruiter_review")
-    graph.add_edge("recruiter_review",    "log_decision")
-    graph.add_edge("log_decision",        END)
+    graph.add_edge("interview_bot", "evaluation_ranking")
+    graph.add_edge("evaluation_ranking", "bias_audit")
+    graph.add_edge("bias_audit", "recruiter_review")
+    graph.add_edge("recruiter_review", "log_decision")
+    graph.add_edge("log_decision", END)
 
     # ── Compile with optional HITL checkpointer ──
     if use_checkpointer:

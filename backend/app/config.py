@@ -4,10 +4,11 @@ Application Configuration
 Centralised settings loaded from environment variables (and .env file).
 All modules import `from backend.app.config import settings`.
 """
+
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AnyUrl, Field, field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,7 +49,7 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/2"
 
     # ── Object Storage ───────────────────────────────────────────────────────
-    s3_endpoint_url: str | None = None          # None → real AWS S3
+    s3_endpoint_url: str | None = None  # None → real AWS S3
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"
     s3_bucket_resumes: str = "arp-resumes"
